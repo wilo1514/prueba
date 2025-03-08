@@ -1,0 +1,75 @@
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - '4000:4000'
+    depends_on:
+      - clients
+      - billing
+      - products
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - app-network
+
+  clients:
+    build: ./clients
+    ports:
+      - '3005:3005'
+    environment:
+      - DB_URI=mongodb://mongo:27017/clientsDB
+    depends_on:
+      - mongo
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - app-network
+
+  products:
+    build: ./products
+    ports:
+      - '3006:3006'
+    environment:
+      - DB_URI=mongodb://mongo:27017/productsDB
+    depends_on:
+      - mongo
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - app-network
+
+  billing:
+    build: ./billing
+    ports:
+      - '3001:3001'
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/facturacionDB
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+    depends_on:
+      - mongo
+    networks:
+      - app-network
+
+  mongo:
+    image: mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - TZ=America/Guayaquil
+    command: >
+      sh -c "apt-get update && apt-get install -y tzdata && ln -fs /usr/share/zoneinfo/America/Guayaquil /etc/localtime && dpkg-reconfigure --frontend noninteractive tzdata && mongod --bind_ip_all"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
