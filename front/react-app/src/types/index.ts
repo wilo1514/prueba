@@ -15,6 +15,7 @@ export interface Product {
     price: number;
 }
 
+
 export interface OrderItem {
     id: string;
     productCode: string;

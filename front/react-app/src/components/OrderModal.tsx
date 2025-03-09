@@ -74,7 +74,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                         {/* Modal Body */}
                         <div className="modal-body">
                             <form>
-                                {/* Información del Cliente */}
+                                {/* Búsqueda de Cliente */}
                                 <div className="mb-3">
                                     <label htmlFor="customerSearch" className="form-label">
                                         Buscar Cliente
@@ -106,7 +106,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                     )}
                                 </div>
 
-                                {/* Mostrar campos autocompletados del Cliente */}
+                                {/* Autocompletado de Datos del Cliente */}
                                 {selectedCustomer && (
                                     <div className="mb-3">
                                         <label className="form-label">Detalles del Cliente</label>
@@ -160,7 +160,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
 
                                 <hr />
 
-                                {/* Productos */}
+                                {/* Sección de Productos */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <h5>Productos</h5>
                                     <button
@@ -195,11 +195,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         onChange={(e) => {
                                                             const newValue = e.target.value;
                                                             onUpdateItem(item.id, 'productCode', newValue);
-                                                            // Umbral para productos: 2 caracteres
+                                                            // Buscar productos cuando se ingresen 2 o más caracteres
                                                             onProductSearchChange(newValue);
                                                         }}
                                                     />
-                                                    {productSearchTerm.length >= 2 &&
+                                                    {productSearchTerm.trim().length >= 2 &&
                                                         filteredProducts.length > 0 && (
                                                             <div
                                                                 className="position-absolute bg-white border border-secondary w-100"
@@ -217,8 +217,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                                         style={{ cursor: 'pointer' }}
                                                                         onClick={() => onProductSelect(item.id, product)}
                                                                     >
-                                                                        <strong>{product.code}</strong> -{' '}
-                                                                        {product.description}
+                                                                        <strong>{product.code}</strong> - {product.description}
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -251,11 +250,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.quantity}
                                                         onChange={(e) =>
-                                                            onUpdateItem(
-                                                                item.id,
-                                                                'quantity',
-                                                                parseInt(e.target.value) || 0
-                                                            )
+                                                            onUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 0)
                                                         }
                                                     />
                                                 </td>
@@ -267,11 +262,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.unitPrice}
                                                         onChange={(e) =>
-                                                            onUpdateItem(
-                                                                item.id,
-                                                                'unitPrice',
-                                                                parseFloat(e.target.value) || 0
-                                                            )
+                                                            onUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)
                                                         }
                                                     />
                                                 </td>
@@ -302,6 +293,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         ))}
                                     </tbody>
                                 </table>
+
                                 {/* Totales */}
                                 <div className="d-flex justify-content-end">
                                     <div style={{ width: '300px' }}>

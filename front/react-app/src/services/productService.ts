@@ -2,29 +2,26 @@
 import axios from 'axios';
 import { Product } from '../types';
 
-const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL;
 
 export const getProducts = async (): Promise<Product[]> => {
-    const response = await axios.get(`${API_GATEWAY_URL}/products`);
-    let data: any = response.data;
+    // Llamamos a /api/products
+    const response = await axios.get(`http://localhost:4000/api/products`);
+    console.log('Products raw data:', response.data);
 
-    // Si la respuesta viene en data.products:
-    if (data && Array.isArray(data.products)) {
-        data = data.products;
-    } else if (!Array.isArray(data)) {
+    // Verificamos que sea un array
+    let data: any = response.data;
+    if (!Array.isArray(data)) {
         data = [];
     }
 
-    console.log('Products raw data:', data);
-
-    // Transformar y hacer trim
+    // Transformamos la data
     const transformed = data.map((prod: any) => ({
-        code: prod.codigoProducto,        // '001'
-        barcode: prod.codigoBarras,       // '454545406826820'
-        description: prod.descripcion,    // 'Torta de chocolate'
-        price: prod.precioUnitario,       // 10
+        code: prod.codigoProducto || '',
+        barcode: prod.codigoBarras || '',
+        description: prod.descripcion || '',
+        price: prod.precioUnitario ?? 0
     }));
-
     console.log('Products transformed:', transformed);
+
     return transformed;
 };

@@ -74,14 +74,13 @@ const OrdersPage: React.FC = () => {
     }, [customerSearchTerm, allCustomers]);
 
     useEffect(() => {
-        const searchTerm = productSearchTerm.trim().toLowerCase();
         console.log('productSearchTerm:', productSearchTerm);
-
-        if (searchTerm.length >= 2) {
+        if (productSearchTerm.trim().length >= 2) {
+            const search = productSearchTerm.trim().toLowerCase();
             const filtered = allProducts.filter((p) =>
-                p.code.toLowerCase().includes(searchTerm) ||
-                p.barcode.includes(searchTerm) ||
-                p.description.toLowerCase().includes(searchTerm)
+                p.code.toLowerCase().includes(search) ||
+                p.barcode.includes(search) ||
+                p.description.toLowerCase().includes(search)
             );
             console.log('Filtered products:', filtered);
             setFilteredProducts(filtered);
@@ -89,7 +88,6 @@ const OrdersPage: React.FC = () => {
             setFilteredProducts([]);
         }
     }, [productSearchTerm, allProducts]);
-
 
     const fetchOrders = async () => {
         try {
@@ -121,7 +119,7 @@ const OrdersPage: React.FC = () => {
         try {
             const products = await getProducts();
             console.log('All products fetched:', products);
-            setAllProducts(Array.isArray(products) ? products : []);
+            setAllProducts(products);
         } catch (error) {
             console.error(error);
         }
@@ -329,7 +327,7 @@ const OrdersPage: React.FC = () => {
                 onCustomerSearch={setCustomerSearchTerm}
                 customerSearchTerm={customerSearchTerm}
                 filteredCustomers={filteredCustomers}
-                // Props para búsqueda de productos:
+                // Props para la búsqueda de productos:
                 productSearchTerm={productSearchTerm}
                 onProductSearchChange={handleProductSearchChange}
                 filteredProducts={filteredProducts}
