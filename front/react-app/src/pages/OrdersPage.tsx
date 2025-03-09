@@ -4,14 +4,15 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import OrderList from '../components/OrderList';
 import OrderModal from '../components/OrderModal';
-import { Order, OrderItem, Customer } from '../types';
+import { Order, OrderItem, Customer, Product } from '../types';
 import { calculateTotals } from '../utils/calculations';
+import { getProducts } from '../services/productService';
 
 // Función para transformar un invoice del backend a un Order
 function transformInvoiceToOrder(invoice: any): Order {
     return {
         id: invoice._id,
-        orderNumber: `ORD-${invoice._id.substring(0, 6)}`, // Ajusta la lógica según convenga
+        orderNumber: `ORD-${invoice._id.substring(0, 6)}`,
         customer: invoice.Cliente?.razonSocial || 'Sin Cliente',
         subtotal: invoice.detalles.reduce((acc: number, d: any) => acc + d.subtotal, 0),
         total: invoice.total,
@@ -49,13 +50,17 @@ const OrdersPage: React.FC = () => {
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
-    // Al montar, obtener pedidos y clientes reales
+    // Estados para la búsqueda de productos
+    const [productSearchTerm, setProductSearchTerm] = useState('');
+    const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
+
     useEffect(() => {
         fetchOrders();
         fetchCustomers();
+        fetchAllProducts();
     }, []);
 
-    // Filtrar clientes en base al término de búsqueda
     useEffect(() => {
         if (customerSearchTerm.length >= 3) {
             const filtered = allCustomers.filter((c) =>
@@ -68,7 +73,24 @@ const OrdersPage: React.FC = () => {
         }
     }, [customerSearchTerm, allCustomers]);
 
-    // Obtener pedidos (invoices) desde la API Gateway
+    useEffect(() => {
+        const searchTerm = productSearchTerm.trim().toLowerCase();
+        console.log('productSearchTerm:', productSearchTerm);
+
+        if (searchTerm.length >= 2) {
+            const filtered = allProducts.filter((p) =>
+                p.code.toLowerCase().includes(searchTerm) ||
+                p.barcode.includes(searchTerm) ||
+                p.description.toLowerCase().includes(searchTerm)
+            );
+            console.log('Filtered products:', filtered);
+            setFilteredProducts(filtered);
+        } else {
+            setFilteredProducts([]);
+        }
+    }, [productSearchTerm, allProducts]);
+
+
     const fetchOrders = async () => {
         try {
             const response = await axios.get('http://localhost:4000/api/invoices');
@@ -82,7 +104,6 @@ const OrdersPage: React.FC = () => {
         }
     };
 
-    // Obtener clientes desde la API Gateway
     const fetchCustomers = async () => {
         try {
             const response = await axios.get('http://localhost:4000/api/clients');
@@ -96,7 +117,22 @@ const OrdersPage: React.FC = () => {
         }
     };
 
-    // Nuevo pedido
+    const fetchAllProducts = async () => {
+        try {
+            const products = await getProducts();
+            console.log('All products fetched:', products);
+            setAllProducts(Array.isArray(products) ? products : []);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleCustomerChange = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setCustomerSearchTerm(customer.companyName);
+        setFilteredCustomers([]);
+    };
+
     const handleNewOrder = () => {
         setEditingOrder(null);
         setSelectedCustomer(null);
@@ -113,10 +149,10 @@ const OrdersPage: React.FC = () => {
             },
         ]);
         setCustomerSearchTerm('');
+        setProductSearchTerm('');
         setIsModalOpen(true);
     };
 
-    // Editar pedido
     const handleEditOrder = (order: Order) => {
         Swal.fire({
             title: 'Confirmar edición',
@@ -129,18 +165,15 @@ const OrdersPage: React.FC = () => {
             if (result.isConfirmed) {
                 setEditingOrder(order);
                 setOrderItems(order.items || []);
-                // Buscamos el cliente entre los clientes obtenidos; si no se encuentra, se usa un objeto vacío
-                const found = allCustomers.find(
-                    (c) => c.companyName === order.customer
-                );
+                const found = allCustomers.find((c) => c.companyName === order.customer);
                 setSelectedCustomer(found || null);
                 setCustomerSearchTerm(order.customer);
+                setProductSearchTerm('');
                 setIsModalOpen(true);
             }
         });
     };
 
-    // Eliminar pedido
     const handleDeleteOrder = (orderId: string) => {
         Swal.fire({
             title: 'Confirmar eliminación',
@@ -163,7 +196,6 @@ const OrdersPage: React.FC = () => {
         });
     };
 
-    // Guardar (crear o actualizar) pedido
     const handleSaveOrder = async () => {
         if (!selectedCustomer) {
             Swal.fire('Error', 'Debe seleccionar un cliente.', 'error');
@@ -176,7 +208,6 @@ const OrdersPage: React.FC = () => {
 
         const totals = calculateTotals(orderItems);
 
-        // Construir el payload según lo que espera el backend
         const invoicePayload = {
             Cliente: {
                 razonSocial: selectedCustomer.companyName,
@@ -203,7 +234,6 @@ const OrdersPage: React.FC = () => {
         };
 
         if (editingOrder) {
-            // Actualizar pedido
             try {
                 await axios.put(`http://localhost:4000/api/invoices/${editingOrder.id}`, invoicePayload);
                 Swal.fire('Éxito', 'Pedido actualizado correctamente.', 'success');
@@ -213,7 +243,6 @@ const OrdersPage: React.FC = () => {
                 Swal.fire('Error', 'No se pudo actualizar el pedido', 'error');
             }
         } else {
-            // Crear pedido
             try {
                 await axios.post(`http://localhost:4000/api/invoices`, invoicePayload);
                 Swal.fire('Éxito', 'Pedido creado correctamente.', 'success');
@@ -226,7 +255,6 @@ const OrdersPage: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    // Agregar ítem al pedido
     const handleAddItem = () => {
         const newItem: OrderItem = {
             id: Date.now().toString(),
@@ -241,12 +269,10 @@ const OrdersPage: React.FC = () => {
         setOrderItems([...orderItems, newItem]);
     };
 
-    // Eliminar ítem del pedido
     const handleRemoveItem = (id: string) => {
         setOrderItems(orderItems.filter((item) => item.id !== id));
     };
 
-    // Actualizar ítem del pedido
     const handleUpdateItem = (id: string, field: keyof OrderItem, value: any) => {
         setOrderItems(
             orderItems.map((item) => {
@@ -260,16 +286,17 @@ const OrdersPage: React.FC = () => {
         );
     };
 
-    // Seleccionar un cliente de la lista filtrada
-    const handleCustomerChange = (customer: Customer) => {
-        setSelectedCustomer(customer);
-        setCustomerSearchTerm(customer.companyName);
-        setFilteredCustomers([]);
+    const handleProductSearchChange = (searchTerm: string) => {
+        setProductSearchTerm(searchTerm);
     };
 
-    // Actualizar término de búsqueda de clientes
-    const handleCustomerSearch = (searchTerm: string) => {
-        setCustomerSearchTerm(searchTerm);
+    const handleProductSelect = (orderItemId: string, product: Product) => {
+        handleUpdateItem(orderItemId, 'productCode', product.code);
+        handleUpdateItem(orderItemId, 'barcode', product.barcode);
+        handleUpdateItem(orderItemId, 'description', product.description);
+        handleUpdateItem(orderItemId, 'unitPrice', product.price);
+        setProductSearchTerm('');
+        setFilteredProducts([]);
     };
 
     return (
@@ -299,9 +326,14 @@ const OrdersPage: React.FC = () => {
                 onRemoveItem={handleRemoveItem}
                 onUpdateItem={handleUpdateItem}
                 onCustomerChange={handleCustomerChange}
-                onCustomerSearch={handleCustomerSearch}
+                onCustomerSearch={setCustomerSearchTerm}
                 customerSearchTerm={customerSearchTerm}
                 filteredCustomers={filteredCustomers}
+                // Props para búsqueda de productos:
+                productSearchTerm={productSearchTerm}
+                onProductSearchChange={handleProductSearchChange}
+                filteredProducts={filteredProducts}
+                onProductSelect={handleProductSelect}
             />
         </div>
     );

@@ -1,6 +1,6 @@
 // src/components/OrderModal.tsx
 import React from 'react';
-import { Order, OrderItem, Customer } from '../types';
+import { Order, OrderItem, Customer, Product } from '../types';
 
 interface OrderModalProps {
     show: boolean;
@@ -17,6 +17,11 @@ interface OrderModalProps {
     onCustomerSearch: (searchTerm: string) => void;
     customerSearchTerm: string;
     filteredCustomers: Customer[];
+    // Props para búsqueda de productos:
+    productSearchTerm: string;
+    onProductSearchChange: (searchTerm: string) => void;
+    filteredProducts: Product[];
+    onProductSelect: (orderItemId: string, product: Product) => void;
 }
 
 const OrderModal: React.FC<OrderModalProps> = ({
@@ -34,6 +39,10 @@ const OrderModal: React.FC<OrderModalProps> = ({
     onCustomerSearch,
     customerSearchTerm,
     filteredCustomers,
+    productSearchTerm,
+    onProductSearchChange,
+    filteredProducts,
+    onProductSelect,
 }) => {
     if (!show) return null;
 
@@ -55,7 +64,12 @@ const OrderModal: React.FC<OrderModalProps> = ({
                             <h5 className="modal-title">
                                 {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}
                             </h5>
-                            <button type="button" className="btn-close" aria-label="Close" onClick={onHide}></button>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                aria-label="Close"
+                                onClick={onHide}
+                            ></button>
                         </div>
                         {/* Modal Body */}
                         <div className="modal-body">
@@ -69,7 +83,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         type="text"
                                         className="form-control"
                                         id="customerSearch"
-                                        placeholder="Buscar cliente..."
+                                        placeholder="Ingrese nombre o RUC..."
                                         value={customerSearchTerm}
                                         onChange={(e) => onCustomerSearch(e.target.value)}
                                     />
@@ -91,24 +105,69 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         </div>
                                     )}
                                 </div>
-                                <div className="mb-3">
-                                    <label htmlFor="customerDetails" className="form-label">
-                                        Detalles del Cliente
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        id="customerDetails"
-                                        placeholder="Nombre del cliente"
-                                        value={selectedCustomer?.companyName || ''}
-                                        readOnly
-                                    />
-                                </div>
+
+                                {/* Mostrar campos autocompletados del Cliente */}
+                                {selectedCustomer && (
+                                    <div className="mb-3">
+                                        <label className="form-label">Detalles del Cliente</label>
+                                        <div className="mb-1">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.companyName}
+                                                readOnly
+                                                placeholder="Nombre"
+                                            />
+                                        </div>
+                                        <div className="mb-1">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.rucCi}
+                                                readOnly
+                                                placeholder="RUC / CI"
+                                            />
+                                        </div>
+                                        <div className="mb-1">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.address}
+                                                readOnly
+                                                placeholder="Dirección"
+                                            />
+                                        </div>
+                                        <div className="mb-1">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.phone}
+                                                readOnly
+                                                placeholder="Teléfono"
+                                            />
+                                        </div>
+                                        <div className="mb-1">
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                value={selectedCustomer.email}
+                                                readOnly
+                                                placeholder="Email"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 <hr />
+
                                 {/* Productos */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <h5>Productos</h5>
-                                    <button type="button" className="btn btn-outline-primary" onClick={onAddItem}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary"
+                                        onClick={onAddItem}
+                                    >
                                         Agregar Producto
                                     </button>
                                 </div>
@@ -128,15 +187,42 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                     <tbody>
                                         {orderItems.map((item) => (
                                             <tr key={item.id}>
-                                                <td>
+                                                <td style={{ position: 'relative' }}>
                                                     <input
                                                         type="text"
                                                         className="form-control"
                                                         value={item.productCode}
-                                                        onChange={(e) =>
-                                                            onUpdateItem(item.id, 'productCode', e.target.value)
-                                                        }
+                                                        onChange={(e) => {
+                                                            const newValue = e.target.value;
+                                                            onUpdateItem(item.id, 'productCode', newValue);
+                                                            // Umbral para productos: 2 caracteres
+                                                            onProductSearchChange(newValue);
+                                                        }}
                                                     />
+                                                    {productSearchTerm.length >= 2 &&
+                                                        filteredProducts.length > 0 && (
+                                                            <div
+                                                                className="position-absolute bg-white border border-secondary w-100"
+                                                                style={{
+                                                                    top: '100%',
+                                                                    zIndex: 1000,
+                                                                    maxHeight: '150px',
+                                                                    overflowY: 'auto',
+                                                                }}
+                                                            >
+                                                                {filteredProducts.map((product) => (
+                                                                    <div
+                                                                        key={product.code}
+                                                                        className="p-2"
+                                                                        style={{ cursor: 'pointer' }}
+                                                                        onClick={() => onProductSelect(item.id, product)}
+                                                                    >
+                                                                        <strong>{product.code}</strong> -{' '}
+                                                                        {product.description}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                 </td>
                                                 <td>
                                                     <input
@@ -165,7 +251,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.quantity}
                                                         onChange={(e) =>
-                                                            onUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 0)
+                                                            onUpdateItem(
+                                                                item.id,
+                                                                'quantity',
+                                                                parseInt(e.target.value) || 0
+                                                            )
                                                         }
                                                     />
                                                 </td>
@@ -177,7 +267,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.unitPrice}
                                                         onChange={(e) =>
-                                                            onUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)
+                                                            onUpdateItem(
+                                                                item.id,
+                                                                'unitPrice',
+                                                                parseFloat(e.target.value) || 0
+                                                            )
                                                         }
                                                     />
                                                 </td>
@@ -201,7 +295,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="btn btn-outline-danger btn-sm"
                                                         onClick={() => onRemoveItem(item.id)}
                                                     >
-                                                        {/* Usamos Font Awesome (asegúrate de cargarlo en index.html o importarlo en main.tsx) */}
                                                         <i className="fa-solid fa-trash"></i>
                                                     </button>
                                                 </td>

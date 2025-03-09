@@ -14,11 +14,11 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
             <table className="table table-striped table-bordered table-hover">
                 <thead className="table-light">
                     <tr>
-                        <th>Order Number</th>
-                        <th>Customer</th>
+                        <th>Numero de Orden</th>
+                        <th>Cliente</th>
                         <th>Subtotal</th>
-                        <th>Total (Inc. Taxes)</th>
-                        <th>Actions</th>
+                        <th>Total con IVA</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>

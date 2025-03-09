@@ -80,3 +80,15 @@ exports.updatePedido = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+
+exports.deletePedido = async (req, res) => {
+    try {
+        const pedido = await Pedido.findByIdAndDelete(req.params.id);
+        if (!pedido) {
+            return res.status(404).json({ error: 'Pedido not found' });
+        }
+        res.status(200).json({ message: 'Pedido deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
