@@ -1,6 +1,13 @@
-import Titulo from './Titulo';
-function App() {
-  return <Titulo></Titulo>;
-}
+// src/App.tsx
+import React from 'react';
+import OrdersPage from './pages/OrdersPage';
 
-export default App
+const App: React.FC = () => {
+  return (
+    <div>
+      <OrdersPage />
+    </div>
+  );
+};
+
+export default App;
