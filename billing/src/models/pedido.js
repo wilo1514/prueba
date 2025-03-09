@@ -15,7 +15,7 @@ const DetalleSchema = new mongoose.Schema({
     subtotal: Number
 });
 const PedidoSchema = new mongoose.Schema({
-    id: Number,
+    Order: Number,
     Cliente: {
         identificacion: String,
         razonSocial: String,

@@ -1,6 +1,5 @@
-// src/components/OrderModal.tsx
+// front/src/components/OrderModal.tsx
 import React from 'react';
-import { FaTrash } from 'react-icons/fa';
 import { Order, OrderItem, Customer } from '../types';
 
 interface OrderModalProps {
@@ -56,12 +55,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                             <h5 className="modal-title">
                                 {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}
                             </h5>
-                            <button
-                                type="button"
-                                className="btn-close"
-                                aria-label="Close"
-                                onClick={onHide}
-                            ></button>
+                            <button type="button" className="btn-close" aria-label="Close" onClick={onHide}></button>
                         </div>
 
                         {/* Modal Body */}
@@ -81,10 +75,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         onChange={(e) => onCustomerSearch(e.target.value)}
                                     />
                                     {customerSearchTerm.length >= 3 && filteredCustomers.length > 0 && (
-                                        <div
-                                            className="border border-secondary mt-1"
-                                            style={{ maxHeight: '150px', overflowY: 'auto' }}
-                                        >
+                                        <div className="border border-secondary mt-1" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                                             {filteredCustomers.map((customer) => (
                                                 <div
                                                     key={customer.rucCi}
@@ -179,11 +170,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.quantity}
                                                         onChange={(e) =>
-                                                            onUpdateItem(
-                                                                item.id,
-                                                                'quantity',
-                                                                parseInt(e.target.value) || 0
-                                                            )
+                                                            onUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 0)
                                                         }
                                                     />
                                                 </td>
@@ -195,11 +182,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.unitPrice}
                                                         onChange={(e) =>
-                                                            onUpdateItem(
-                                                                item.id,
-                                                                'unitPrice',
-                                                                parseFloat(e.target.value) || 0
-                                                            )
+                                                            onUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)
                                                         }
                                                     />
                                                 </td>
@@ -223,7 +206,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="btn btn-outline-danger btn-sm"
                                                         onClick={() => onRemoveItem(item.id)}
                                                     >
-                                                        <span><FaTrash size={16} /></span>
+                                                        <i className="fa-solid fa-trash"></i>
                                                     </button>
                                                 </td>
                                             </tr>
