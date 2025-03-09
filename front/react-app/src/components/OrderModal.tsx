@@ -1,4 +1,4 @@
-// front/src/components/OrderModal.tsx
+// src/components/OrderModal.tsx
 import React from 'react';
 import { Order, OrderItem, Customer } from '../types';
 
@@ -57,7 +57,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                             </h5>
                             <button type="button" className="btn-close" aria-label="Close" onClick={onHide}></button>
                         </div>
-
                         {/* Modal Body */}
                         <div className="modal-body">
                             <form>
@@ -75,7 +74,10 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         onChange={(e) => onCustomerSearch(e.target.value)}
                                     />
                                     {customerSearchTerm.length >= 3 && filteredCustomers.length > 0 && (
-                                        <div className="border border-secondary mt-1" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                        <div
+                                            className="border border-secondary mt-1"
+                                            style={{ maxHeight: '150px', overflowY: 'auto' }}
+                                        >
                                             {filteredCustomers.map((customer) => (
                                                 <div
                                                     key={customer.rucCi}
@@ -89,7 +91,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         </div>
                                     )}
                                 </div>
-
                                 <div className="mb-3">
                                     <label htmlFor="customerDetails" className="form-label">
                                         Detalles del Cliente
@@ -103,17 +104,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         readOnly
                                     />
                                 </div>
-
                                 <hr />
-
-                                {/* Tabla de Productos */}
+                                {/* Productos */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <h5>Productos</h5>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary"
-                                        onClick={onAddItem}
-                                    >
+                                    <button type="button" className="btn btn-outline-primary" onClick={onAddItem}>
                                         Agregar Producto
                                     </button>
                                 </div>
@@ -206,6 +201,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="btn btn-outline-danger btn-sm"
                                                         onClick={() => onRemoveItem(item.id)}
                                                     >
+                                                        {/* Usamos Font Awesome (asegúrate de cargarlo en index.html o importarlo en main.tsx) */}
                                                         <i className="fa-solid fa-trash"></i>
                                                     </button>
                                                 </td>
@@ -213,7 +209,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         ))}
                                     </tbody>
                                 </table>
-
                                 {/* Totales */}
                                 <div className="d-flex justify-content-end">
                                     <div style={{ width: '300px' }}>
@@ -233,7 +228,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                 </div>
                             </form>
                         </div>
-
                         {/* Modal Footer */}
                         <div className="modal-footer">
                             <button type="button" className="btn btn-secondary" onClick={onHide}>

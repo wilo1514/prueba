@@ -1,98 +1,122 @@
 // src/pages/OrdersPage.tsx
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Swal from 'sweetalert2';
 import OrderList from '../components/OrderList';
 import OrderModal from '../components/OrderModal';
 import { Order, OrderItem, Customer } from '../types';
 import { calculateTotals } from '../utils/calculations';
 
-// Datos de ejemplo para clientes (puedes reemplazar por llamadas a customerService)
-const mockCustomers: Customer[] = [
-    {
-        companyName: 'Tech Corp',
-        rucCi: '20123456789',
-        address: '123 Tech Street',
-        phone: '555-0123',
-        email: 'contact@techcorp.com'
-    },
-    {
-        companyName: 'Global Industries',
-        rucCi: '20987654321',
-        address: '456 Global Avenue',
-        phone: '555-0456',
-        email: 'info@globalind.com'
-    }
-];
+// Función para transformar un invoice del backend a un Order
+function transformInvoiceToOrder(invoice: any): Order {
+    return {
+        id: invoice._id,
+        orderNumber: `ORD-${invoice._id.substring(0, 6)}`, // Ajusta la lógica según convenga
+        customer: invoice.Cliente?.razonSocial || 'Sin Cliente',
+        subtotal: invoice.detalles.reduce((acc: number, d: any) => acc + d.subtotal, 0),
+        total: invoice.total,
+        items: invoice.detalles.map((det: any) => ({
+            id: det._id || '',
+            productCode: det.codigoProducto,
+            barcode: det.codigoBarras,
+            description: det.descripcion,
+            quantity: det.cantidad,
+            unitPrice: det.precioUnitario,
+            vat: det.impuestos && det.impuestos.length ? parseInt(det.impuestos[0].percentage) : 0,
+            subtotal: det.subtotal,
+        })),
+    };
+}
+
+// Función para transformar un cliente del backend a Customer
+function transformClientToCustomer(client: any): Customer {
+    return {
+        companyName: client.razonSocial,
+        rucCi: client.identificacion,
+        address: client.direccion,
+        phone: client.telefono,
+        email: client.email,
+    };
+}
 
 const OrdersPage: React.FC = () => {
-    const [orders, setOrders] = useState<Order[]>([
-        {
-            id: '1',
-            orderNumber: 'ORD-001',
-            customer: 'Tech Corp',
-            subtotal: 1200.0,
-            total: 1416.0,
-            items: [
-                {
-                    id: '1',
-                    productCode: 'P001',
-                    barcode: '123456789',
-                    description: 'Laptop Computer',
-                    quantity: 1,
-                    unitPrice: 999.99,
-                    vat: 15,
-                    subtotal: 999.99
-                }
-            ]
-        },
-        {
-            id: '2',
-            orderNumber: 'ORD-002',
-            customer: 'Global Industries',
-            subtotal: 850.0,
-            total: 1003.0,
-            items: []
-        }
-    ]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingOrder, setEditingOrder] = useState<Order | null>(null);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+    const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
-    // Actualiza la lista de clientes filtrados según el término de búsqueda
+    // Al montar, obtener pedidos y clientes reales
+    useEffect(() => {
+        fetchOrders();
+        fetchCustomers();
+    }, []);
+
+    // Filtrar clientes en base al término de búsqueda
     useEffect(() => {
         if (customerSearchTerm.length >= 3) {
-            const filtered = mockCustomers.filter(customer =>
-                customer.companyName.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-                customer.rucCi.includes(customerSearchTerm)
+            const filtered = allCustomers.filter((c) =>
+                c.companyName.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                c.rucCi.includes(customerSearchTerm)
             );
             setFilteredCustomers(filtered);
         } else {
             setFilteredCustomers([]);
         }
-    }, [customerSearchTerm]);
+    }, [customerSearchTerm, allCustomers]);
 
+    // Obtener pedidos (invoices) desde la API Gateway
+    const fetchOrders = async () => {
+        try {
+            const response = await axios.get('http://localhost:4000/api/invoices');
+            const transformed = response.data.map((inv: any) =>
+                transformInvoiceToOrder(inv)
+            );
+            setOrders(transformed);
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo obtener la lista de pedidos', 'error');
+        }
+    };
+
+    // Obtener clientes desde la API Gateway
+    const fetchCustomers = async () => {
+        try {
+            const response = await axios.get('http://localhost:4000/api/clients');
+            const transformed = response.data.map((cli: any) =>
+                transformClientToCustomer(cli)
+            );
+            setAllCustomers(transformed);
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo obtener la lista de clientes', 'error');
+        }
+    };
+
+    // Nuevo pedido
     const handleNewOrder = () => {
         setEditingOrder(null);
         setSelectedCustomer(null);
         setOrderItems([
             {
-                id: '1',
+                id: `temp-${Date.now()}`,
                 productCode: '',
                 barcode: '',
                 description: '',
                 quantity: 1,
                 unitPrice: 0,
                 vat: 15,
-                subtotal: 0
-            }
+                subtotal: 0,
+            },
         ]);
         setCustomerSearchTerm('');
         setIsModalOpen(true);
     };
 
+    // Editar pedido
     const handleEditOrder = (order: Order) => {
         Swal.fire({
             title: 'Confirmar edición',
@@ -100,36 +124,23 @@ const OrdersPage: React.FC = () => {
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, modificar',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
         }).then((result) => {
             if (result.isConfirmed) {
                 setEditingOrder(order);
-                setOrderItems(
-                    order.items && order.items.length > 0
-                        ? order.items
-                        : [
-                            {
-                                id: '1',
-                                productCode: '',
-                                barcode: '',
-                                description: '',
-                                quantity: 1,
-                                unitPrice: 0,
-                                vat: 15,
-                                subtotal: 0
-                            }
-                        ]
+                setOrderItems(order.items || []);
+                // Buscamos el cliente entre los clientes obtenidos; si no se encuentra, se usa un objeto vacío
+                const found = allCustomers.find(
+                    (c) => c.companyName === order.customer
                 );
-                const customer = mockCustomers.find(c => c.companyName === order.customer);
-                if (customer) {
-                    setSelectedCustomer(customer);
-                    setCustomerSearchTerm(customer.companyName);
-                }
+                setSelectedCustomer(found || null);
+                setCustomerSearchTerm(order.customer);
                 setIsModalOpen(true);
             }
         });
     };
 
+    // Eliminar pedido
     const handleDeleteOrder = (orderId: string) => {
         Swal.fire({
             title: 'Confirmar eliminación',
@@ -137,55 +148,85 @@ const OrdersPage: React.FC = () => {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
+            cancelButtonText: 'Cancelar',
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setOrders(orders.filter(order => order.id !== orderId));
-                Swal.fire('Eliminado!', 'El pedido ha sido eliminado.', 'success');
+                try {
+                    await axios.delete(`http://localhost:4000/api/invoices/${orderId}`);
+                    Swal.fire('Eliminado!', 'El pedido ha sido eliminado.', 'success');
+                    fetchOrders();
+                } catch (error) {
+                    console.error(error);
+                    Swal.fire('Error', 'No se pudo eliminar el pedido', 'error');
+                }
             }
         });
     };
 
-    // Validaciones: se verifica que se haya seleccionado un cliente y que cada ítem tenga un código de producto
-    const handleSaveOrder = () => {
+    // Guardar (crear o actualizar) pedido
+    const handleSaveOrder = async () => {
         if (!selectedCustomer) {
             Swal.fire('Error', 'Debe seleccionar un cliente.', 'error');
             return;
         }
-        if (orderItems.length === 0 || orderItems.some(item => item.productCode.trim() === '')) {
+        if (orderItems.length === 0 || orderItems.some((item) => item.productCode.trim() === '')) {
             Swal.fire('Error', 'Debe agregar al menos un producto con código válido.', 'error');
             return;
         }
 
         const totals = calculateTotals(orderItems);
 
+        // Construir el payload según lo que espera el backend
+        const invoicePayload = {
+            Cliente: {
+                razonSocial: selectedCustomer.companyName,
+                identificacion: selectedCustomer.rucCi,
+                direccion: selectedCustomer.address,
+                telefono: selectedCustomer.phone,
+                email: selectedCustomer.email,
+            },
+            detalles: orderItems.map((item) => ({
+                codigoProducto: item.productCode,
+                codigoBarras: item.barcode,
+                descripcion: item.description,
+                cantidad: item.quantity,
+                precioUnitario: item.unitPrice,
+                impuestos: [
+                    {
+                        IVA: true,
+                        percentage: item.vat.toString(),
+                    },
+                ],
+                subtotal: item.subtotal,
+            })),
+            total: parseFloat(totals.total),
+        };
+
         if (editingOrder) {
             // Actualizar pedido
-            const updatedOrder: Order = {
-                ...editingOrder,
-                customer: selectedCustomer.companyName,
-                items: orderItems,
-                subtotal: parseFloat(totals.subtotal),
-                total: parseFloat(totals.total)
-            };
-            setOrders(orders.map(order => (order.id === editingOrder.id ? updatedOrder : order)));
-            Swal.fire('Éxito', 'Pedido actualizado correctamente.', 'success');
+            try {
+                await axios.put(`http://localhost:4000/api/invoices/${editingOrder.id}`, invoicePayload);
+                Swal.fire('Éxito', 'Pedido actualizado correctamente.', 'success');
+                fetchOrders();
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo actualizar el pedido', 'error');
+            }
         } else {
-            // Crear nuevo pedido
-            const newOrder: Order = {
-                id: Date.now().toString(),
-                orderNumber: `ORD-${(orders.length + 1).toString().padStart(3, '0')}`,
-                customer: selectedCustomer.companyName,
-                items: orderItems,
-                subtotal: parseFloat(totals.subtotal),
-                total: parseFloat(totals.total)
-            };
-            setOrders([...orders, newOrder]);
-            Swal.fire('Éxito', 'Pedido creado correctamente.', 'success');
+            // Crear pedido
+            try {
+                await axios.post(`http://localhost:4000/api/invoices`, invoicePayload);
+                Swal.fire('Éxito', 'Pedido creado correctamente.', 'success');
+                fetchOrders();
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo crear el pedido', 'error');
+            }
         }
         setIsModalOpen(false);
     };
 
+    // Agregar ítem al pedido
     const handleAddItem = () => {
         const newItem: OrderItem = {
             id: Date.now().toString(),
@@ -195,21 +236,22 @@ const OrdersPage: React.FC = () => {
             quantity: 1,
             unitPrice: 0,
             vat: 15,
-            subtotal: 0
+            subtotal: 0,
         };
         setOrderItems([...orderItems, newItem]);
     };
 
+    // Eliminar ítem del pedido
     const handleRemoveItem = (id: string) => {
-        setOrderItems(orderItems.filter(item => item.id !== id));
+        setOrderItems(orderItems.filter((item) => item.id !== id));
     };
 
+    // Actualizar ítem del pedido
     const handleUpdateItem = (id: string, field: keyof OrderItem, value: any) => {
         setOrderItems(
-            orderItems.map(item => {
+            orderItems.map((item) => {
                 if (item.id === id) {
                     const updatedItem = { ...item, [field]: value };
-                    // Actualiza el subtotal según la cantidad y el precio unitario
                     updatedItem.subtotal = updatedItem.quantity * updatedItem.unitPrice;
                     return updatedItem;
                 }
@@ -218,12 +260,14 @@ const OrdersPage: React.FC = () => {
         );
     };
 
+    // Seleccionar un cliente de la lista filtrada
     const handleCustomerChange = (customer: Customer) => {
         setSelectedCustomer(customer);
         setCustomerSearchTerm(customer.companyName);
         setFilteredCustomers([]);
     };
 
+    // Actualizar término de búsqueda de clientes
     const handleCustomerSearch = (searchTerm: string) => {
         setCustomerSearchTerm(searchTerm);
     };
@@ -236,11 +280,13 @@ const OrdersPage: React.FC = () => {
                     Nuevo Pedido
                 </button>
             </div>
+
             <OrderList
                 orders={orders}
                 onEditOrder={handleEditOrder}
                 onDeleteOrder={handleDeleteOrder}
             />
+
             <OrderModal
                 show={isModalOpen}
                 editingOrder={editingOrder}

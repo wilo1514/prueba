@@ -5,7 +5,6 @@ import { Order } from '../types';
 const API_GATEWAY_URL = import.meta.env.REACT_APP_API_GATEWAY_URL;
 
 const transformOrder = (order: any): Order => {
-    // Asumiendo que tu Order tiene una propiedad 'id'
     return { ...order, id: order._id };
 };
 

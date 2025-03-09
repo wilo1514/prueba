@@ -1,4 +1,4 @@
-// front/src/components/OrderList.tsx
+// src/components/OrderList.tsx
 import React from 'react';
 import { Order } from '../types';
 
@@ -10,7 +10,7 @@ interface OrderListProps {
 
 const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrder }) => {
     return (
-        <div className="container">
+        <div className="table-responsive">
             <table className="table table-striped table-bordered table-hover">
                 <thead className="table-light">
                     <tr>
@@ -22,13 +22,13 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                     </tr>
                 </thead>
                 <tbody>
-                    {orders.map(order => (
+                    {orders.map((order) => (
                         <tr key={order.id}>
                             <td>{order.orderNumber}</td>
                             <td>{order.customer}</td>
                             <td>${order.subtotal.toFixed(2)}</td>
                             <td>${order.total.toFixed(2)}</td>
-                            <td>
+                            <td style={{ width: '150px' }}>
                                 <button
                                     className="btn btn-outline-primary btn-sm me-2"
                                     onClick={() => onEditOrder(order)}
