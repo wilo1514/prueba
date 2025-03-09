@@ -1,5 +1,6 @@
 import React from 'react';
 import { Order, OrderItem, Customer, Product } from '../types';
+import OrderItemRow from './OrderItemRow';
 
 interface OrderModalProps {
     show: boolean;
@@ -16,10 +17,8 @@ interface OrderModalProps {
     onCustomerSearch: (searchTerm: string) => void;
     customerSearchTerm: string;
     filteredCustomers: Customer[];
-    // Props para búsqueda de productos (solo en el campo Código)
-    productSearchTerm: string;
-    onProductSearchChange: (searchTerm: string) => void;
-    filteredProducts: Product[];
+    // Para productos, ahora enviamos la lista completa
+    allProducts: Product[];
     onProductSelect: (orderItemId: string, product: Product) => void;
 }
 
@@ -38,9 +37,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
     onCustomerSearch,
     customerSearchTerm,
     filteredCustomers,
-    productSearchTerm,
-    onProductSearchChange,
-    filteredProducts,
+    allProducts,
     onProductSelect,
 }) => {
     if (!show) return null;
@@ -49,20 +46,12 @@ const OrderModal: React.FC<OrderModalProps> = ({
         <>
             {/* Backdrop */}
             <div className="modal-backdrop fade show"></div>
-            <div
-                className="modal fade show"
-                tabIndex={-1}
-                style={{ display: 'block' }}
-                aria-modal="true"
-                role="dialog"
-            >
+            <div className="modal fade show" tabIndex={-1} style={{ display: 'block' }} aria-modal="true" role="dialog">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     <div className="modal-content">
                         {/* Modal Header */}
                         <div className="modal-header">
-                            <h5 className="modal-title">
-                                {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}
-                            </h5>
+                            <h5 className="modal-title">{editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}</h5>
                             <button type="button" className="btn-close" aria-label="Close" onClick={onHide}></button>
                         </div>
                         {/* Modal Body */}
@@ -70,9 +59,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                             <form>
                                 {/* Información del Cliente */}
                                 <div className="mb-3">
-                                    <label htmlFor="customerSearch" className="form-label">
-                                        Buscar Cliente
-                                    </label>
+                                    <label htmlFor="customerSearch" className="form-label">Buscar Cliente</label>
                                     <input
                                         type="text"
                                         className="form-control"
@@ -82,10 +69,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         onChange={(e) => onCustomerSearch(e.target.value)}
                                     />
                                     {customerSearchTerm.length >= 3 && filteredCustomers.length > 0 && (
-                                        <div
-                                            className="border border-secondary mt-1"
-                                            style={{ maxHeight: '150px', overflowY: 'auto' }}
-                                        >
+                                        <div className="border border-secondary mt-1" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                                             {filteredCustomers.map((customer) => (
                                                 <div
                                                     key={customer.rucCi}
@@ -100,54 +84,23 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                     )}
                                 </div>
 
-                                {/* Autocompletado de Datos del Cliente */}
                                 {selectedCustomer && (
                                     <div className="mb-3">
                                         <label className="form-label">Detalles del Cliente</label>
                                         <div className="mb-1">
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                value={selectedCustomer.companyName}
-                                                readOnly
-                                                placeholder="Nombre"
-                                            />
+                                            <input type="text" className="form-control" value={selectedCustomer.companyName} readOnly placeholder="Nombre" />
                                         </div>
                                         <div className="mb-1">
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                value={selectedCustomer.rucCi}
-                                                readOnly
-                                                placeholder="RUC / CI"
-                                            />
+                                            <input type="text" className="form-control" value={selectedCustomer.rucCi} readOnly placeholder="RUC / CI" />
                                         </div>
                                         <div className="mb-1">
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                value={selectedCustomer.address}
-                                                readOnly
-                                                placeholder="Dirección"
-                                            />
+                                            <input type="text" className="form-control" value={selectedCustomer.address} readOnly placeholder="Dirección" />
                                         </div>
                                         <div className="mb-1">
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                value={selectedCustomer.phone}
-                                                readOnly
-                                                placeholder="Teléfono"
-                                            />
+                                            <input type="text" className="form-control" value={selectedCustomer.phone} readOnly placeholder="Teléfono" />
                                         </div>
                                         <div className="mb-1">
-                                            <input
-                                                type="email"
-                                                className="form-control"
-                                                value={selectedCustomer.email}
-                                                readOnly
-                                                placeholder="Email"
-                                            />
+                                            <input type="email" className="form-control" value={selectedCustomer.email} readOnly placeholder="Email" />
                                         </div>
                                     </div>
                                 )}
@@ -176,124 +129,17 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                     </thead>
                                     <tbody>
                                         {orderItems.map((item) => (
-                                            <tr key={item.id}>
-                                                {/* Columna de Producto: Solo busca por código */}
-                                                <td style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        value={item.productCode}
-                                                        onChange={(e) => {
-                                                            const newValue = e.target.value;
-                                                            onUpdateItem(item.id, 'productCode', newValue);
-                                                            // Buscamos productos con umbral de 2 caracteres
-                                                            onProductSearchChange(newValue);
-                                                        }}
-                                                    />
-                                                    {productSearchTerm.trim().length >= 2 &&
-                                                        filteredProducts.length > 0 && (
-                                                            <div
-                                                                className="position-absolute bg-white border border-secondary w-100"
-                                                                style={{
-                                                                    top: '100%',
-                                                                    zIndex: 1000,
-                                                                    maxHeight: '150px',
-                                                                    overflowY: 'auto',
-                                                                }}
-                                                            >
-                                                                {filteredProducts.map((product) => (
-                                                                    <div
-                                                                        key={product.code}
-                                                                        className="p-2"
-                                                                        style={{ cursor: 'pointer' }}
-                                                                        onClick={() => onProductSelect(item.id, product)}
-                                                                    >
-                                                                        <strong>{product.code}</strong> - {product.description}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                </td>
-                                                {/* Las otras columnas no realizan búsqueda, solo se actualizan al seleccionar el producto */}
-                                                <td>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        value={item.barcode}
-                                                        onChange={(e) =>
-                                                            onUpdateItem(item.id, 'barcode', e.target.value)
-                                                        }
-                                                    />
-                                                </td>
-                                                <td>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        value={item.description}
-                                                        onChange={(e) =>
-                                                            onUpdateItem(item.id, 'description', e.target.value)
-                                                        }
-                                                    />
-                                                </td>
-                                                <td>
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        className="form-control"
-                                                        value={item.quantity}
-                                                        onChange={(e) =>
-                                                            onUpdateItem(
-                                                                item.id,
-                                                                'quantity',
-                                                                parseInt(e.target.value) || 0
-                                                            )
-                                                        }
-                                                    />
-                                                </td>
-                                                <td>
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        className="form-control"
-                                                        value={item.unitPrice}
-                                                        onChange={(e) =>
-                                                            onUpdateItem(
-                                                                item.id,
-                                                                'unitPrice',
-                                                                parseFloat(e.target.value) || 0
-                                                            )
-                                                        }
-                                                    />
-                                                </td>
-                                                <td>
-                                                    <select
-                                                        className="form-select"
-                                                        value={item.vat}
-                                                        onChange={(e) =>
-                                                            onUpdateItem(item.id, 'vat', parseInt(e.target.value))
-                                                        }
-                                                    >
-                                                        <option value="15">15%</option>
-                                                        <option value="3">3%</option>
-                                                        <option value="0">0%</option>
-                                                    </select>
-                                                </td>
-                                                <td>${item.subtotal.toFixed(2)}</td>
-                                                <td>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-outline-danger btn-sm"
-                                                        onClick={() => onRemoveItem(item.id)}
-                                                    >
-                                                        <i className="fa-solid fa-trash"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                            <OrderItemRow
+                                                key={item.id}
+                                                item={item}
+                                                allProducts={allProducts}
+                                                onUpdateItem={onUpdateItem}
+                                                onRemoveItem={onRemoveItem}
+                                                onProductSelect={onProductSelect}
+                                            />
                                         ))}
                                     </tbody>
                                 </table>
-                                {/* Totales */}
                                 <div className="d-flex justify-content-end">
                                     <div style={{ width: '300px' }}>
                                         <div className="d-flex justify-content-between">
@@ -312,7 +158,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                 </div>
                             </form>
                         </div>
-                        {/* Modal Footer */}
                         <div className="modal-footer">
                             <button type="button" className="btn btn-secondary" onClick={onHide}>
                                 Cancelar

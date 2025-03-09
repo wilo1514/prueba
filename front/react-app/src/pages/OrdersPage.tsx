@@ -1,3 +1,4 @@
+// src/pages/OrdersPage.tsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -28,9 +29,10 @@ function transformInvoiceToOrder(invoice: any): Order {
     };
 }
 
-// Transforma un cliente del backend a Customer
+// Transforma un cliente del backend a Customer (incluye id)
 function transformClientToCustomer(client: any): Customer {
     return {
+        id: client._id,
         companyName: client.razonSocial,
         rucCi: client.identificacion,
         address: client.direccion,
@@ -49,9 +51,7 @@ const OrdersPage: React.FC = () => {
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
-    // Estados para productos
-    const [productSearchTerm, setProductSearchTerm] = useState('');
-    const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+    // Estado para productos (se usa la lista completa en OrderModal para búsquedas en cada campo)
     const [allProducts, setAllProducts] = useState<Product[]>([]);
 
     useEffect(() => {
@@ -71,20 +71,6 @@ const OrdersPage: React.FC = () => {
             setFilteredCustomers([]);
         }
     }, [customerSearchTerm, allCustomers]);
-
-    useEffect(() => {
-        console.log('productSearchTerm:', productSearchTerm);
-        if (productSearchTerm.trim().length >= 2) {
-            const search = productSearchTerm.trim().toLowerCase();
-            const filtered = allProducts.filter((p) =>
-                p.code.toLowerCase().includes(search)
-            );
-            console.log('Filtered products:', filtered);
-            setFilteredProducts(filtered);
-        } else {
-            setFilteredProducts([]);
-        }
-    }, [productSearchTerm, allProducts]);
 
     const fetchOrders = async () => {
         try {
@@ -140,7 +126,6 @@ const OrdersPage: React.FC = () => {
             },
         ]);
         setCustomerSearchTerm('');
-        setProductSearchTerm('');
         setIsModalOpen(true);
     };
 
@@ -159,7 +144,6 @@ const OrdersPage: React.FC = () => {
                 const found = allCustomers.find((c) => c.companyName === order.customer);
                 setSelectedCustomer(found || null);
                 setCustomerSearchTerm(order.customer);
-                setProductSearchTerm('');
                 setIsModalOpen(true);
             }
         });
@@ -187,6 +171,21 @@ const OrdersPage: React.FC = () => {
         });
     };
 
+    // Función para manejar la selección de un producto
+    const handleProductSelect = (orderItemId: string, product: Product) => {
+        // Evitar duplicados: verificar si ya existe el producto en otro ítem
+        const exists = orderItems.some((item) => item.productCode === product.code);
+        if (exists) {
+            Swal.fire('Error', 'El producto ya está agregado en el pedido.', 'error');
+            return;
+        }
+        // Actualizar campos del ítem con la información del producto seleccionado
+        handleUpdateItem(orderItemId, 'productCode', product.code);
+        handleUpdateItem(orderItemId, 'barcode', product.barcode);
+        handleUpdateItem(orderItemId, 'description', product.description);
+        handleUpdateItem(orderItemId, 'unitPrice', product.price);
+    };
+
     const handleSaveOrder = async () => {
         if (!selectedCustomer) {
             Swal.fire('Error', 'Debe seleccionar un cliente.', 'error');
@@ -197,7 +196,7 @@ const OrdersPage: React.FC = () => {
             return;
         }
 
-        // Verificar stock: para cada ítem, buscar en allProducts
+        // Validar stock para cada ítem
         for (const item of orderItems) {
             const prod = allProducts.find((p) => p.code === item.productCode);
             if (!prod) {
@@ -205,72 +204,46 @@ const OrdersPage: React.FC = () => {
                 return;
             }
             if (prod.stock < item.quantity) {
-                Swal.fire(
-                    'Error',
-                    `El producto ${prod.code} (${prod.description}) tiene stock insuficiente.`,
-                    'error'
-                );
+                Swal.fire('Error', `El producto ${prod.code} (${prod.description}) tiene stock insuficiente.`, 'error');
                 return;
             }
         }
 
         const totals = calculateTotals(orderItems);
 
-        const invoicePayload = {
-            Cliente: {
-                razonSocial: selectedCustomer.companyName,
-                identificacion: selectedCustomer.rucCi,
-                direccion: selectedCustomer.address,
-                telefono: selectedCustomer.phone,
-                email: selectedCustomer.email,
-            },
+        // Construir payload con la estructura requerida
+        const payload = {
+            clienteId: selectedCustomer.id,
             detalles: orderItems.map((item) => ({
                 codigoProducto: item.productCode,
-                codigoBarras: item.barcode,
-                descripcion: item.description,
                 cantidad: item.quantity,
-                precioUnitario: item.unitPrice,
-                impuestos: [
-                    {
-                        IVA: true,
-                        percentage: item.vat.toString(),
-                    },
-                ],
-                subtotal: item.subtotal,
+                percentage: item.vat,
             })),
-            total: parseFloat(totals.total),
         };
 
-        if (editingOrder) {
-            try {
-                await axios.put(`http://localhost:4000/api/invoices/${editingOrder.id}`, invoicePayload);
+        try {
+            if (editingOrder) {
+                await axios.put(`http://localhost:4000/api/invoices/${editingOrder.id}`, payload);
                 Swal.fire('Éxito', 'Pedido actualizado correctamente.', 'success');
-                fetchOrders();
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'No se pudo actualizar el pedido', 'error');
-            }
-        } else {
-            try {
-                await axios.post(`http://localhost:4000/api/invoices`, invoicePayload);
+            } else {
+                await axios.post(`http://localhost:4000/api/invoices`, payload);
                 Swal.fire('Éxito', 'Pedido creado correctamente.', 'success');
-                fetchOrders();
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'No se pudo crear el pedido', 'error');
             }
+            fetchOrders();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo guardar el pedido', 'error');
+            return;
         }
 
-        // Actualizar stock para cada producto
+        // Actualizar stock para cada producto (restar la cantidad ordenada)
         for (const item of orderItems) {
             try {
-                // Llamamos al servicio para actualizar stock; en este ejemplo, restamos la cantidad ordenada.
                 await updateProductStock(item.productCode, item.quantity);
             } catch (error) {
                 console.error(`Error actualizando stock para ${item.productCode}:`, error);
             }
         }
-
         setIsModalOpen(false);
     };
 
@@ -305,25 +278,6 @@ const OrdersPage: React.FC = () => {
         );
     };
 
-    const handleProductSearchChange = (searchTerm: string) => {
-        setProductSearchTerm(searchTerm);
-    };
-
-    const handleProductSelect = (orderItemId: string, product: Product) => {
-        // Evitar duplicados
-        const exists = orderItems.some((item) => item.productCode === product.code);
-        if (exists) {
-            Swal.fire('Error', 'El producto ya está agregado en el pedido.', 'error');
-            return;
-        }
-        handleUpdateItem(orderItemId, 'productCode', product.code);
-        handleUpdateItem(orderItemId, 'barcode', product.barcode);
-        handleUpdateItem(orderItemId, 'description', product.description);
-        handleUpdateItem(orderItemId, 'unitPrice', product.price);
-        setProductSearchTerm('');
-        // Se limpiará el dropdown con el useEffect al tener productSearchTerm vacío.
-    };
-
     return (
         <div className="container py-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -354,10 +308,8 @@ const OrdersPage: React.FC = () => {
                 onCustomerSearch={setCustomerSearchTerm}
                 customerSearchTerm={customerSearchTerm}
                 filteredCustomers={filteredCustomers}
-                // Props para la búsqueda de productos:
-                productSearchTerm={productSearchTerm}
-                onProductSearchChange={handleProductSearchChange}
-                filteredProducts={filteredProducts}
+                // Para la búsqueda de productos, se pasa la lista completa
+                allProducts={allProducts}
                 onProductSelect={handleProductSelect}
             />
         </div>

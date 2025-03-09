@@ -29,6 +29,7 @@ export interface OrderItem {
 }
 
 export interface Customer {
+    id: string;
     companyName: string;
     rucCi: string;
     address: string;

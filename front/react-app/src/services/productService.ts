@@ -3,9 +3,9 @@ import axios from 'axios';
 import { Product } from '../types';
 
 
+
 export const getProducts = async (): Promise<Product[]> => {
     try {
-        // Llamada al endpoint de productos; asegúrate que Nginx enrute /api/products al microservicio correcto.
         const response = await axios.get(`http://localhost:4000/api/products`);
         console.log('Products raw data:', response.data);
         let data: any = response.data;
@@ -27,11 +27,10 @@ export const getProducts = async (): Promise<Product[]> => {
     }
 };
 
-// Actualiza el stock de un producto restando la cantidad vendida o ajustando según la nueva cantidad
+// Actualiza el stock del producto (por ejemplo, restando la cantidad solicitada)
 export const updateProductStock = async (productCode: string, quantity: number) => {
     try {
-        // Llamada al endpoint para actualizar el stock. Se asume que el backend realiza la lógica de stock.
-        // Por ejemplo, PUT /api/products/stock/001 con body { quantity: 2 }
+        // Se espera que el endpoint reciba { quantity } y actualice el stock
         const response = await axios.put(`http://localhost:4000/api/products/stock/${productCode}`, { quantity });
         return response.data;
     } catch (error) {
