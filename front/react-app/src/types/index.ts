@@ -13,6 +13,7 @@ export interface Product {
     barcode: string;
     description: string;
     price: number;
+    stock: number;
 }
 
 

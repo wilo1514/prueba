@@ -10,6 +10,7 @@ router.get('/:id', productController.getProductById);
 router.post('/', productController.createProduct);
 router.put('/:id', productController.updateProduct);
 router.put('/codigoBarras:codigoBarras', productController.updateProductByBarCode);
+router.put('/stock/:codigoProducto', productController.updateProductStock);
 router.delete('/:id', productController.deleteProduct);
 router.post('/buscarPorCodigos', productController.getProductsByCodigos);
 

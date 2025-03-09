@@ -41,13 +41,40 @@ exports.updateProduct = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+
 exports.updateProductByBarCode = async (req, res) => {
     try {
-        const client = await Client.findOneAndUpdate({ codigoBarras: req.params.codigoBarras }, req.body, { new: true });
-        if (!client) {
+        const product = await Client.findOneAndUpdate({ codigoBarras: req.params.codigoBarras }, req.body, { new: true });
+        if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
-        res.status(200).json(client);
+        res.status(200).json(product);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+exports.updateProductStock = async (req, res) => {
+    try {
+        const { codigoProducto } = req.params;
+        const { oldQuantity, newQuantity } = req.body;
+
+        if (typeof oldQuantity !== 'number' || typeof newQuantity !== 'number') {
+            return res.status(400).json({ error: 'oldQuantity and newQuantity must be numbers' });
+        }
+
+        const product = await Product.findOne({ codigoProducto });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        const delta = oldQuantity - newQuantity;
+        const updatedStock = product.stock + delta;
+        if (updatedStock < 0) {
+            return res.status(400).json({ error: 'Insufficient stock' });
+        }
+
+        product.stock = updatedStock;
+        await product.save();
+        res.status(200).json(product);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

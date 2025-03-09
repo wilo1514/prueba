@@ -1,4 +1,3 @@
-// src/components/OrderModal.tsx
 import React from 'react';
 import { Order, OrderItem, Customer, Product } from '../types';
 
@@ -17,7 +16,7 @@ interface OrderModalProps {
     onCustomerSearch: (searchTerm: string) => void;
     customerSearchTerm: string;
     filteredCustomers: Customer[];
-    // Props para búsqueda de productos:
+    // Props para búsqueda de productos (solo en el campo Código)
     productSearchTerm: string;
     onProductSearchChange: (searchTerm: string) => void;
     filteredProducts: Product[];
@@ -64,17 +63,12 @@ const OrderModal: React.FC<OrderModalProps> = ({
                             <h5 className="modal-title">
                                 {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}
                             </h5>
-                            <button
-                                type="button"
-                                className="btn-close"
-                                aria-label="Close"
-                                onClick={onHide}
-                            ></button>
+                            <button type="button" className="btn-close" aria-label="Close" onClick={onHide}></button>
                         </div>
                         {/* Modal Body */}
                         <div className="modal-body">
                             <form>
-                                {/* Búsqueda de Cliente */}
+                                {/* Información del Cliente */}
                                 <div className="mb-3">
                                     <label htmlFor="customerSearch" className="form-label">
                                         Buscar Cliente
@@ -163,11 +157,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                 {/* Sección de Productos */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <h5>Productos</h5>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary"
-                                        onClick={onAddItem}
-                                    >
+                                    <button type="button" className="btn btn-outline-primary" onClick={onAddItem}>
                                         Agregar Producto
                                     </button>
                                 </div>
@@ -187,6 +177,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                     <tbody>
                                         {orderItems.map((item) => (
                                             <tr key={item.id}>
+                                                {/* Columna de Producto: Solo busca por código */}
                                                 <td style={{ position: 'relative' }}>
                                                     <input
                                                         type="text"
@@ -195,7 +186,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         onChange={(e) => {
                                                             const newValue = e.target.value;
                                                             onUpdateItem(item.id, 'productCode', newValue);
-                                                            // Buscar productos cuando se ingresen 2 o más caracteres
+                                                            // Buscamos productos con umbral de 2 caracteres
                                                             onProductSearchChange(newValue);
                                                         }}
                                                     />
@@ -223,6 +214,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                             </div>
                                                         )}
                                                 </td>
+                                                {/* Las otras columnas no realizan búsqueda, solo se actualizan al seleccionar el producto */}
                                                 <td>
                                                     <input
                                                         type="text"
@@ -250,7 +242,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.quantity}
                                                         onChange={(e) =>
-                                                            onUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 0)
+                                                            onUpdateItem(
+                                                                item.id,
+                                                                'quantity',
+                                                                parseInt(e.target.value) || 0
+                                                            )
                                                         }
                                                     />
                                                 </td>
@@ -262,7 +258,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                                         className="form-control"
                                                         value={item.unitPrice}
                                                         onChange={(e) =>
-                                                            onUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)
+                                                            onUpdateItem(
+                                                                item.id,
+                                                                'unitPrice',
+                                                                parseFloat(e.target.value) || 0
+                                                            )
                                                         }
                                                     />
                                                 </td>
@@ -293,7 +293,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         ))}
                                     </tbody>
                                 </table>
-
                                 {/* Totales */}
                                 <div className="d-flex justify-content-end">
                                     <div style={{ width: '300px' }}>

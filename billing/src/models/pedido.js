@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const ImpuestoSchema = new mongoose.Schema({
-    IVA: Boolean,
     percentage: String,
 });
 
@@ -12,7 +11,8 @@ const DetalleSchema = new mongoose.Schema({
     cantidad: Number,
     precioUnitario: Number,
     impuestos: [ImpuestoSchema],
-    subtotal: Number
+    subtotal: Number,
+    totalimp: Number
 });
 const PedidoSchema = new mongoose.Schema({
     Order: Number,

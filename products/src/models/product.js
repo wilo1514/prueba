@@ -8,8 +8,6 @@ const productSchema = new Schema({
     descripcion: String,
     precioUnitario: Number,
     stock: Number,
-    IVA: Boolean,
-    percentage: Number,
 });
 
 module.exports = mongoose.model('Product', productSchema);

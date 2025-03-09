@@ -31,6 +31,7 @@ async function construirDetallesPedido(detalles) {
         if (!productoEncontrado) {
             throw new Error(`Producto con código ${d.codigoProducto} no encontrado`);
         }
+        const subtotal = d.cantidad * productoEncontrado.precioUnitario;
         return {
             codigoProducto: productoEncontrado.codigoProducto,
             codigoBarras: productoEncontrado.codigoBarras,
@@ -39,16 +40,16 @@ async function construirDetallesPedido(detalles) {
             precioUnitario: productoEncontrado.precioUnitario,
             impuestos: [
                 {
-                    IVA: productoEncontrado.IVA,
-                    percentage: productoEncontrado.percentage
+                    percentage: d.percentage
                 }
             ],
-            subtotal: d.cantidad * productoEncontrado.precioUnitario * ((productoEncontrado.percentage + 100) / 100)
+            subtotal: subtotal,
+            totalimp: subtotal * ((d.percentage + 100) / 100)
         };
     });
 }
 function calculoTotal(detallesPedido) {
-    return detallesPedido.reduce((sum, item) => sum + item.subtotal, 0);
+    return detallesPedido.reduce((sum, item) => sum + item.totalimp, 0);
 }
 
 module.exports = { obtenerDatosCliente, obtenerDetallesProductos, construirDetallesPedido, calculoTotal };
