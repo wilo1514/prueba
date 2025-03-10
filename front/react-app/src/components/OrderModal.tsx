@@ -1,3 +1,4 @@
+// src/components/OrderModal.tsx
 import React from 'react';
 import { Order, OrderItem, Customer, Product } from '../types';
 import OrderItemRow from './OrderItemRow';
@@ -17,7 +18,6 @@ interface OrderModalProps {
     onCustomerSearch: (searchTerm: string) => void;
     customerSearchTerm: string;
     filteredCustomers: Customer[];
-    // Para productos, ahora enviamos la lista completa
     allProducts: Product[];
     onProductSelect: (orderItemId: string, product: Product) => void;
 }
@@ -46,20 +46,35 @@ const OrderModal: React.FC<OrderModalProps> = ({
         <>
             {/* Backdrop */}
             <div className="modal-backdrop fade show"></div>
-            <div className="modal fade show" tabIndex={-1} style={{ display: 'block' }} aria-modal="true" role="dialog">
+            <div
+                className="modal fade show"
+                tabIndex={-1}
+                style={{ display: 'block' }}
+                aria-modal="true"
+                role="dialog"
+            >
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     <div className="modal-content">
                         {/* Modal Header */}
                         <div className="modal-header">
-                            <h5 className="modal-title">{editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}</h5>
-                            <button type="button" className="btn-close" aria-label="Close" onClick={onHide}></button>
+                            <h5 className="modal-title">
+                                {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}
+                            </h5>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                aria-label="Close"
+                                onClick={onHide}
+                            ></button>
                         </div>
                         {/* Modal Body */}
                         <div className="modal-body">
                             <form>
                                 {/* Información del Cliente */}
                                 <div className="mb-3">
-                                    <label htmlFor="customerSearch" className="form-label">Buscar Cliente</label>
+                                    <label htmlFor="customerSearch" className="form-label">
+                                        Buscar Cliente
+                                    </label>
                                     <input
                                         type="text"
                                         className="form-control"
@@ -69,7 +84,13 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                         onChange={(e) => onCustomerSearch(e.target.value)}
                                     />
                                     {customerSearchTerm.length >= 3 && filteredCustomers.length > 0 && (
-                                        <div className="border border-secondary mt-1" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                        <div
+                                            className="border border-secondary mt-1"
+                                            style={{
+                                                maxHeight: '150px',
+                                                overflowY: 'auto',
+                                            }}
+                                        >
                                             {filteredCustomers.map((customer) => (
                                                 <div
                                                     key={customer.rucCi}
@@ -88,19 +109,49 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                     <div className="mb-3">
                                         <label className="form-label">Detalles del Cliente</label>
                                         <div className="mb-1">
-                                            <input type="text" className="form-control" value={selectedCustomer.companyName} readOnly placeholder="Nombre" />
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.companyName}
+                                                readOnly
+                                                placeholder="Nombre"
+                                            />
                                         </div>
                                         <div className="mb-1">
-                                            <input type="text" className="form-control" value={selectedCustomer.rucCi} readOnly placeholder="RUC / CI" />
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.rucCi}
+                                                readOnly
+                                                placeholder="RUC / CI"
+                                            />
                                         </div>
                                         <div className="mb-1">
-                                            <input type="text" className="form-control" value={selectedCustomer.address} readOnly placeholder="Dirección" />
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.address}
+                                                readOnly
+                                                placeholder="Dirección"
+                                            />
                                         </div>
                                         <div className="mb-1">
-                                            <input type="text" className="form-control" value={selectedCustomer.phone} readOnly placeholder="Teléfono" />
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={selectedCustomer.phone}
+                                                readOnly
+                                                placeholder="Teléfono"
+                                            />
                                         </div>
                                         <div className="mb-1">
-                                            <input type="email" className="form-control" value={selectedCustomer.email} readOnly placeholder="Email" />
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                value={selectedCustomer.email}
+                                                readOnly
+                                                placeholder="Email"
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -110,13 +161,18 @@ const OrderModal: React.FC<OrderModalProps> = ({
                                 {/* Sección de Productos */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <h5>Productos</h5>
-                                    <button type="button" className="btn btn-outline-primary" onClick={onAddItem}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary"
+                                        onClick={onAddItem}
+                                    >
                                         Agregar Producto
                                     </button>
                                 </div>
                                 <table className="table table-striped table-bordered table-hover">
                                     <thead>
                                         <tr>
+                                            <th>Buscar Producto</th>
                                             <th>Código</th>
                                             <th>Barcode</th>
                                             <th>Descripción</th>
@@ -159,10 +215,18 @@ const OrderModal: React.FC<OrderModalProps> = ({
                             </form>
                         </div>
                         <div className="modal-footer">
-                            <button type="button" className="btn btn-secondary" onClick={onHide}>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={onHide}
+                            >
                                 Cancelar
                             </button>
-                            <button type="button" className="btn btn-primary" onClick={onSave}>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={onSave}
+                            >
                                 {editingOrder ? 'Actualizar Pedido' : 'Crear Pedido'}
                             </button>
                         </div>

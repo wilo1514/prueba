@@ -47,11 +47,10 @@ const OrdersPage: React.FC = () => {
     const [editingOrder, setEditingOrder] = useState<Order | null>(null);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+    const [originalOrderItems, setOriginalOrderItems] = useState<OrderItem[]>([]);
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
-
-    // Estado para productos (se usa la lista completa en OrderModal para búsquedas en cada campo)
     const [allProducts, setAllProducts] = useState<Product[]>([]);
 
     useEffect(() => {
@@ -110,21 +109,12 @@ const OrdersPage: React.FC = () => {
         setFilteredCustomers([]);
     };
 
+    // Nuevo pedido: sin productos por defecto
     const handleNewOrder = () => {
         setEditingOrder(null);
         setSelectedCustomer(null);
-        setOrderItems([
-            {
-                id: `temp-${Date.now()}`,
-                productCode: '',
-                barcode: '',
-                description: '',
-                quantity: 1,
-                unitPrice: 0,
-                vat: 15,
-                subtotal: 0,
-            },
-        ]);
+        setOrderItems([]);
+        setOriginalOrderItems([]);
         setCustomerSearchTerm('');
         setIsModalOpen(true);
     };
@@ -141,6 +131,7 @@ const OrdersPage: React.FC = () => {
             if (result.isConfirmed) {
                 setEditingOrder(order);
                 setOrderItems(order.items || []);
+                setOriginalOrderItems(order.items ? order.items.map((i) => ({ ...i })) : []);
                 const found = allCustomers.find((c) => c.companyName === order.customer);
                 setSelectedCustomer(found || null);
                 setCustomerSearchTerm(order.customer);
@@ -149,6 +140,7 @@ const OrdersPage: React.FC = () => {
         });
     };
 
+    // Eliminar pedido: devolver stock
     const handleDeleteOrder = (orderId: string) => {
         Swal.fire({
             title: 'Confirmar eliminación',
@@ -159,6 +151,17 @@ const OrdersPage: React.FC = () => {
             cancelButtonText: 'Cancelar',
         }).then(async (result) => {
             if (result.isConfirmed) {
+                const orderToDelete = orders.find((o) => o.id === orderId);
+                if (orderToDelete) {
+                    // Regresamos el stock
+                    for (const item of orderToDelete.items) {
+                        try {
+                            await updateProductStock(item.productCode, item.quantity, 0);
+                        } catch (error) {
+                            console.error(`Error actualizando stock al eliminar pedido:`, error);
+                        }
+                    }
+                }
                 try {
                     await axios.delete(`http://localhost:4000/api/invoices/${orderId}`);
                     Swal.fire('Eliminado!', 'El pedido ha sido eliminado.', 'success');
@@ -171,19 +174,26 @@ const OrdersPage: React.FC = () => {
         });
     };
 
-    // Función para manejar la selección de un producto
+    // Autocompletado al seleccionar un producto
     const handleProductSelect = (orderItemId: string, product: Product) => {
-        // Evitar duplicados: verificar si ya existe el producto en otro ítem
-        const exists = orderItems.some((item) => item.productCode === product.code);
-        if (exists) {
+        // Verificar si ya existe en otra fila
+        const normalizedCode = product.code.trim().toLowerCase();
+        const existsInOtherRow = orderItems.some((item) => {
+            if (item.id === orderItemId) return false; // Ignorar la fila actual
+            return item.productCode.trim().toLowerCase() === normalizedCode;
+        });
+        if (existsInOtherRow) {
             Swal.fire('Error', 'El producto ya está agregado en el pedido.', 'error');
             return;
         }
-        // Actualizar campos del ítem con la información del producto seleccionado
-        handleUpdateItem(orderItemId, 'productCode', product.code);
-        handleUpdateItem(orderItemId, 'barcode', product.barcode);
-        handleUpdateItem(orderItemId, 'description', product.description);
+
+        // Autocompletar la fila actual
+        handleUpdateItem(orderItemId, 'productCode', product.code.trim());
+        handleUpdateItem(orderItemId, 'barcode', product.barcode.trim());
+        handleUpdateItem(orderItemId, 'description', product.description.trim());
         handleUpdateItem(orderItemId, 'unitPrice', product.price);
+        // Si deseas forzar un IVA por defecto:
+        // handleUpdateItem(orderItemId, 'vat', 15);
     };
 
     const handleSaveOrder = async () => {
@@ -196,22 +206,32 @@ const OrdersPage: React.FC = () => {
             return;
         }
 
-        // Validar stock para cada ítem
+        // Validar stock
         for (const item of orderItems) {
             const prod = allProducts.find((p) => p.code === item.productCode);
             if (!prod) {
                 Swal.fire('Error', `El producto con código ${item.productCode} no se encontró.`, 'error');
                 return;
             }
-            if (prod.stock < item.quantity) {
-                Swal.fire('Error', `El producto ${prod.code} (${prod.description}) tiene stock insuficiente.`, 'error');
+            let availableStock = prod.stock;
+            if (editingOrder) {
+                const origItem = originalOrderItems.find((i) => i.id === item.id);
+                const origQty = origItem ? origItem.quantity : 0;
+                availableStock += origQty;
+            }
+            if (item.quantity > availableStock) {
+                Swal.fire(
+                    'Error',
+                    `El producto ${prod.code} (${prod.description}) tiene stock insuficiente. Disponible: ${availableStock}`,
+                    'error'
+                );
                 return;
             }
         }
 
         const totals = calculateTotals(orderItems);
 
-        // Construir payload con la estructura requerida
+        // Construir payload
         const payload = {
             clienteId: selectedCustomer.id,
             detalles: orderItems.map((item) => ({
@@ -236,12 +256,37 @@ const OrdersPage: React.FC = () => {
             return;
         }
 
-        // Actualizar stock para cada producto (restar la cantidad ordenada)
-        for (const item of orderItems) {
-            try {
-                await updateProductStock(item.productCode, item.quantity);
-            } catch (error) {
-                console.error(`Error actualizando stock para ${item.productCode}:`, error);
+        // Actualizar stock
+        if (editingOrder) {
+            // Para productos eliminados
+            for (const origItem of originalOrderItems) {
+                const exists = orderItems.find((i) => i.id === origItem.id);
+                if (!exists) {
+                    try {
+                        await updateProductStock(origItem.productCode, origItem.quantity, 0);
+                    } catch (error) {
+                        console.error(`Error actualizando stock para ${origItem.productCode}:`, error);
+                    }
+                }
+            }
+            // Para productos que se mantienen o se agregan
+            for (const item of orderItems) {
+                const origItem = originalOrderItems.find((i) => i.id === item.id);
+                const oldQuantity = origItem ? origItem.quantity : 0;
+                try {
+                    await updateProductStock(item.productCode, oldQuantity, item.quantity);
+                } catch (error) {
+                    console.error(`Error actualizando stock para ${item.productCode}:`, error);
+                }
+            }
+        } else {
+            // Pedido nuevo
+            for (const item of orderItems) {
+                try {
+                    await updateProductStock(item.productCode, 0, item.quantity);
+                } catch (error) {
+                    console.error(`Error actualizando stock para ${item.productCode}:`, error);
+                }
             }
         }
         setIsModalOpen(false);
@@ -253,7 +298,7 @@ const OrdersPage: React.FC = () => {
             productCode: '',
             barcode: '',
             description: '',
-            quantity: 1,
+            quantity: 0,
             unitPrice: 0,
             vat: 15,
             subtotal: 0,
@@ -266,8 +311,8 @@ const OrdersPage: React.FC = () => {
     };
 
     const handleUpdateItem = (id: string, field: keyof OrderItem, value: any) => {
-        setOrderItems(
-            orderItems.map((item) => {
+        setOrderItems((prevItems) =>
+            prevItems.map((item) => {
                 if (item.id === id) {
                     const updatedItem = { ...item, [field]: value };
                     updatedItem.subtotal = updatedItem.quantity * updatedItem.unitPrice;
@@ -308,7 +353,6 @@ const OrdersPage: React.FC = () => {
                 onCustomerSearch={setCustomerSearchTerm}
                 customerSearchTerm={customerSearchTerm}
                 filteredCustomers={filteredCustomers}
-                // Para la búsqueda de productos, se pasa la lista completa
                 allProducts={allProducts}
                 onProductSelect={handleProductSelect}
             />

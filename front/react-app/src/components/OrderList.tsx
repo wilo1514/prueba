@@ -10,43 +10,35 @@ interface OrderListProps {
 
 const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrder }) => {
     return (
-        <div className="table-responsive">
-            <table className="table table-striped table-bordered table-hover">
-                <thead className="table-light">
-                    <tr>
-                        <th>Numero de Orden</th>
-                        <th>Cliente</th>
-                        <th>Subtotal</th>
-                        <th>Total con IVA</th>
-                        <th>Acciones</th>
+        <table className="table table-striped table-bordered table-hover">
+            <thead className="table-light">
+                <tr>
+                    <th>Order Number</th>
+                    <th>Customer</th>
+                    <th>Subtotal</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {orders.map((order) => (
+                    <tr key={order.id}>
+                        <td>{order.orderNumber}</td>
+                        <td>{order.customer}</td>
+                        <td>${order.subtotal.toFixed(2)}</td>
+                        <td>${order.total.toFixed(2)}</td>
+                        <td>
+                            <button className="btn btn-outline-primary btn-sm me-2" onClick={() => onEditOrder(order)}>
+                                Editar
+                            </button>
+                            <button className="btn btn-outline-danger btn-sm" onClick={() => onDeleteOrder(order.id)}>
+                                Eliminar
+                            </button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {orders.map((order) => (
-                        <tr key={order.id}>
-                            <td>{order.orderNumber}</td>
-                            <td>{order.customer}</td>
-                            <td>${order.subtotal.toFixed(2)}</td>
-                            <td>${order.total.toFixed(2)}</td>
-                            <td style={{ width: '150px' }}>
-                                <button
-                                    className="btn btn-outline-primary btn-sm me-2"
-                                    onClick={() => onEditOrder(order)}
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    className="btn btn-outline-danger btn-sm"
-                                    onClick={() => onDeleteOrder(order.id)}
-                                >
-                                    Eliminar
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+                ))}
+            </tbody>
+        </table>
     );
 };
 

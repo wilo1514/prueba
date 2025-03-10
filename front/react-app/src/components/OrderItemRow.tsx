@@ -10,105 +10,111 @@ interface OrderItemRowProps {
     onProductSelect: (orderItemId: string, product: Product) => void;
 }
 
-const OrderItemRow: React.FC<OrderItemRowProps> = ({ item, allProducts, onUpdateItem, onRemoveItem, onProductSelect }) => {
-    // Estados locales para la búsqueda en cada campo
-    const [searchCode, setSearchCode] = useState('');
-    const [searchBarcode, setSearchBarcode] = useState('');
-    const [searchDescription, setSearchDescription] = useState('');
+const OrderItemRow: React.FC<OrderItemRowProps> = ({
+    item,
+    allProducts,
+    onUpdateItem,
+    onRemoveItem,
+    onProductSelect,
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredByCode = searchCode.trim().length >= 2
-        ? allProducts.filter(p => p.code.toLowerCase().includes(searchCode.trim().toLowerCase()))
+    // Filtra productos por código, barcode o descripción
+    const filteredProducts = searchTerm.trim().length >= 2
+        ? allProducts.filter((p) =>
+            p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.description.toLowerCase().includes(searchTerm.toLowerCase())
+        )
         : [];
-    const filteredByBarcode = searchBarcode.trim().length >= 2
-        ? allProducts.filter(p => p.barcode.toLowerCase().includes(searchBarcode.trim().toLowerCase()))
-        : [];
-    const filteredByDescription = searchDescription.trim().length >= 2
-        ? allProducts.filter(p => p.description.toLowerCase().includes(searchDescription.trim().toLowerCase()))
-        : [];
+
+    // Manejador para cantidad
+    const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newQty = parseInt(e.target.value, 10) || 0;
+        onUpdateItem(item.id, 'quantity', newQty);
+    };
+
+    // Manejador para IVA
+    const handleVatChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newVat = parseInt(e.target.value, 10) || 0;
+        onUpdateItem(item.id, 'vat', newVat);
+    };
 
     return (
         <tr>
+            {/* Campo único de búsqueda */}
             <td style={{ position: 'relative' }}>
+                <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Buscar producto..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm.trim().length >= 2 && filteredProducts.length > 0 && (
+                    <div
+                        className="position-absolute bg-white border border-secondary w-100"
+                        style={{ top: '100%', zIndex: 1000, maxHeight: '150px', overflowY: 'auto' }}
+                    >
+                        {filteredProducts.map((product) => (
+                            <div
+                                key={product.code}
+                                className="p-2"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                    onProductSelect(item.id, product);
+                                    setSearchTerm('');
+                                }}
+                            >
+                                <strong>{product.code}</strong> - {product.barcode} - {product.description}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </td>
+
+            {/* Código (solo lectura) */}
+            <td>
                 <input
                     type="text"
                     className="form-control"
                     value={item.productCode}
-                    onChange={(e) => {
-                        const newVal = e.target.value;
-                        onUpdateItem(item.id, 'productCode', newVal);
-                        setSearchCode(newVal);
-                    }}
+                    readOnly
                 />
-                {searchCode.trim().length >= 2 && filteredByCode.length > 0 && (
-                    <div className="position-absolute bg-white border border-secondary w-100" style={{ top: '100%', zIndex: 1000, maxHeight: '150px', overflowY: 'auto' }}>
-                        {filteredByCode.map(product => (
-                            <div key={product.code} className="p-2" style={{ cursor: 'pointer' }} onClick={() => {
-                                onProductSelect(item.id, product);
-                                setSearchCode('');
-                            }}>
-                                <strong>{product.code}</strong>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </td>
-            <td style={{ position: 'relative' }}>
+
+            {/* Barcode (solo lectura) */}
+            <td>
                 <input
                     type="text"
                     className="form-control"
                     value={item.barcode}
-                    onChange={(e) => {
-                        const newVal = e.target.value;
-                        onUpdateItem(item.id, 'barcode', newVal);
-                        setSearchBarcode(newVal);
-                    }}
+                    readOnly
                 />
-                {searchBarcode.trim().length >= 2 && filteredByBarcode.length > 0 && (
-                    <div className="position-absolute bg-white border border-secondary w-100" style={{ top: '100%', zIndex: 1000, maxHeight: '150px', overflowY: 'auto' }}>
-                        {filteredByBarcode.map(product => (
-                            <div key={product.code} className="p-2" style={{ cursor: 'pointer' }} onClick={() => {
-                                onProductSelect(item.id, product);
-                                setSearchBarcode('');
-                            }}>
-                                <strong>{product.barcode}</strong>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </td>
-            <td style={{ position: 'relative' }}>
+
+            {/* Descripción (solo lectura) */}
+            <td>
                 <input
                     type="text"
                     className="form-control"
                     value={item.description}
-                    onChange={(e) => {
-                        const newVal = e.target.value;
-                        onUpdateItem(item.id, 'description', newVal);
-                        setSearchDescription(newVal);
-                    }}
+                    readOnly
                 />
-                {searchDescription.trim().length >= 2 && filteredByDescription.length > 0 && (
-                    <div className="position-absolute bg-white border border-secondary w-100" style={{ top: '100%', zIndex: 1000, maxHeight: '150px', overflowY: 'auto' }}>
-                        {filteredByDescription.map(product => (
-                            <div key={product.code} className="p-2" style={{ cursor: 'pointer' }} onClick={() => {
-                                onProductSelect(item.id, product);
-                                setSearchDescription('');
-                            }}>
-                                {product.description}
-                            </div>
-                        ))}
-                    </div>
-                )}
             </td>
+
+            {/* Cantidad (editable) */}
             <td>
                 <input
                     type="number"
                     min="1"
                     className="form-control"
                     value={item.quantity}
-                    onChange={(e) => onUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                    onChange={handleQuantityChange}
                 />
             </td>
+
+            {/* Precio Unitario (solo lectura) */}
             <td>
                 <input
                     type="number"
@@ -116,23 +122,33 @@ const OrderItemRow: React.FC<OrderItemRowProps> = ({ item, allProducts, onUpdate
                     min="0"
                     className="form-control"
                     value={item.unitPrice}
-                    onChange={(e) => onUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    readOnly
                 />
             </td>
+
+            {/* IVA (editable) */}
             <td>
                 <select
                     className="form-select"
                     value={item.vat}
-                    onChange={(e) => onUpdateItem(item.id, 'vat', parseInt(e.target.value))}
+                    onChange={handleVatChange}
                 >
                     <option value="15">15%</option>
                     <option value="3">3%</option>
                     <option value="0">0%</option>
                 </select>
             </td>
+
+            {/* Subtotal (solo lectura) */}
             <td>${item.subtotal.toFixed(2)}</td>
+
+            {/* Botón para eliminar la fila */}
             <td>
-                <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => onRemoveItem(item.id)}>
+                <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => onRemoveItem(item.id)}
+                >
                     <i className="fa-solid fa-trash"></i>
                 </button>
             </td>

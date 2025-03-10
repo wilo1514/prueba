@@ -55,7 +55,11 @@ exports.updateProductByBarCode = async (req, res) => {
 };
 exports.updateProductStock = async (req, res) => {
     try {
-        const { codigoProducto } = req.params;
+        let { codigoProducto } = req.params;
+        codigoProducto = codigoProducto.trim(); // Elimina espacios y saltos de línea
+
+        console.log('Buscando producto con código:', JSON.stringify(codigoProducto)); // Depuración
+
         const { oldQuantity, newQuantity } = req.body;
 
         if (typeof oldQuantity !== 'number' || typeof newQuantity !== 'number') {
@@ -63,9 +67,12 @@ exports.updateProductStock = async (req, res) => {
         }
 
         const product = await Product.findOne({ codigoProducto });
+        console.log('Resultado de la búsqueda:', product);
+
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
+
         const delta = oldQuantity - newQuantity;
         const updatedStock = product.stock + delta;
         if (updatedStock < 0) {
@@ -79,6 +86,7 @@ exports.updateProductStock = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+
 exports.deleteProduct = async (req, res) => {
     try {
         const products = await Product.findByIdAndDelete(req.params.id);
